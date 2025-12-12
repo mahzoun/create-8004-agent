@@ -75,7 +75,7 @@ app.use(
  */
 
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 ${streamingImport}
 ${x402Import}
@@ -114,7 +114,7 @@ ${x402Setup}
  * Agent Card endpoint - required for A2A discovery
  * Other agents use this to learn about your agent's capabilities
  */
-app.get('/.well-known/agent-card.json', async (req, res) => {
+app.get('/.well-known/agent-card.json', async (_req: Request, res: Response) => {
   const agentCard = await import('../.well-known/agent-card.json', { assert: { type: 'json' } });
   res.json(agentCard.default);
 });
@@ -124,7 +124,7 @@ ${answers.a2aStreaming
  * Main JSON-RPC 2.0 endpoint
  * All A2A protocol methods are called through this single endpoint
  */
-app.post('/a2a', async (req, res) => {
+app.post('/a2a', async (req: Request, res: Response) => {
   const { jsonrpc, method, params, id } = req.body;
 
   // Validate JSON-RPC version
@@ -150,7 +150,7 @@ app.post('/a2a', async (req, res) => {
  * Main JSON-RPC 2.0 endpoint
  * All A2A protocol methods are called through this single endpoint
  */
-app.post('/a2a', async (req, res) => {
+app.post('/a2a', async (req: Request, res: Response) => {
   const { jsonrpc, method, params, id } = req.body;
 
   // Validate JSON-RPC version
