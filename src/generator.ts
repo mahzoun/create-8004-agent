@@ -1,8 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
 import { CHAINS } from "./config.js";
+import { SOLANA_CHAINS, isSolanaChain } from "./config-solana.js";
 import type { WizardAnswers } from "./wizard.js";
 import { hasFeature } from "./wizard.js";
+// EVM templates
 import {
     generatePackageJson,
     generateEnvExample,
@@ -10,6 +12,15 @@ import {
     generateRegisterScript,
     generateAgentTs,
 } from "./templates/base.js";
+// Solana templates
+import {
+    generateSolanaPackageJson,
+    generateSolanaEnv,
+    generateSolanaRegistrationJson,
+    generateSolanaRegisterScript,
+    generateAgentTs as generateSolanaAgentTs,
+} from "./templates/solana.js";
+// Shared templates (work for both EVM and Solana)
 import { generateA2AServer, generateAgentCard } from "./templates/a2a.js";
 import { generateMCPServer, generateMCPTools } from "./templates/mcp.js";
 
@@ -24,9 +35,31 @@ export async function generateProject(answers: WizardAnswers): Promise<void> {
         await fs.mkdir(path.join(projectPath, ".well-known"), { recursive: true });
     }
 
-    const chain = CHAINS[answers.chain];
+    // Route to Solana or EVM templates based on chain
+    if (isSolanaChain(answers.chain)) {
+        await generateSolanaProject(projectPath, answers);
+    } else {
+        await generateEVMProject(projectPath, answers);
+    }
 
-    // Generate base files
+    // Generate shared files (A2A, MCP work for both)
+    if (hasFeature(answers, "a2a")) {
+        await writeFile(projectPath, "src/a2a-server.ts", generateA2AServer(answers));
+        await writeFile(projectPath, ".well-known/agent-card.json", generateAgentCard(answers));
+    }
+
+    if (hasFeature(answers, "mcp")) {
+        await writeFile(projectPath, "src/mcp-server.ts", generateMCPServer(answers));
+        await writeFile(projectPath, "src/tools.ts", generateMCPTools());
+    }
+}
+
+/**
+ * Generate EVM-specific project files
+ */
+async function generateEVMProject(projectPath: string, answers: WizardAnswers): Promise<void> {
+    const chain = CHAINS[answers.chain as keyof typeof CHAINS];
+
     await writeFile(projectPath, "package.json", generatePackageJson(answers));
     await writeFile(projectPath, ".env", generateEnvExample(answers));
     await writeFile(projectPath, "registration.json", generateRegistrationJson(answers, chain));
@@ -34,18 +67,21 @@ export async function generateProject(answers: WizardAnswers): Promise<void> {
     await writeFile(projectPath, "src/agent.ts", generateAgentTs(answers));
     await writeFile(projectPath, "tsconfig.json", generateTsConfig());
     await writeFile(projectPath, ".gitignore", generateGitignore());
+}
 
-    // Generate A2A files
-    if (hasFeature(answers, "a2a")) {
-        await writeFile(projectPath, "src/a2a-server.ts", generateA2AServer(answers));
-        await writeFile(projectPath, ".well-known/agent-card.json", generateAgentCard(answers));
-    }
+/**
+ * Generate Solana-specific project files
+ */
+async function generateSolanaProject(projectPath: string, answers: WizardAnswers): Promise<void> {
+    const chain = SOLANA_CHAINS[answers.chain as keyof typeof SOLANA_CHAINS];
 
-    // Generate MCP files
-    if (hasFeature(answers, "mcp")) {
-        await writeFile(projectPath, "src/mcp-server.ts", generateMCPServer(answers));
-        await writeFile(projectPath, "src/tools.ts", generateMCPTools());
-    }
+    await writeFile(projectPath, "package.json", generateSolanaPackageJson(answers));
+    await writeFile(projectPath, ".env", generateSolanaEnv(answers));
+    await writeFile(projectPath, "registration.json", generateSolanaRegistrationJson(answers, chain));
+    await writeFile(projectPath, "src/register.ts", generateSolanaRegisterScript(answers, chain));
+    await writeFile(projectPath, "src/agent.ts", generateSolanaAgentTs(answers));
+    await writeFile(projectPath, "tsconfig.json", generateTsConfig());
+    await writeFile(projectPath, ".gitignore", generateGitignore());
 }
 
 async function writeFile(projectPath: string, filePath: string, content: string): Promise<void> {

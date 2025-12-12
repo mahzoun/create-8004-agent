@@ -1,4 +1,5 @@
 import { type ChainKey, type TrustModel } from "./config.js";
+import { type SolanaChainKey } from "./config-solana.js";
 export interface WizardAnswers {
     projectDir: string;
     agentName: string;
@@ -7,10 +8,13 @@ export interface WizardAnswers {
     features: ("a2a" | "mcp" | "x402")[];
     a2aStreaming: boolean;
     storageType: "ipfs" | "base64";
-    chain: ChainKey;
+    chain: ChainKey | SolanaChainKey;
     trustModels: TrustModel[];
     agentWallet: string;
     generatedPrivateKey?: string;
+    skills?: string[];
+    domains?: string[];
 }
+export { isSolanaChain } from "./config-solana.js";
 export declare const hasFeature: (answers: WizardAnswers, feature: "a2a" | "mcp" | "x402") => boolean;
 export declare function runWizard(): Promise<WizardAnswers>;

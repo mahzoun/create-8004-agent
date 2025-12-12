@@ -38,7 +38,9 @@ export function generatePackageJson(answers: WizardAnswers): string {
     }
 
     if (hasFeature(answers, "x402")) {
-        dependencies["x402-express"] = "^1.0.0";
+        dependencies["@x402/express"] = "^2.0.0";
+        dependencies["@x402/core"] = "^2.0.0";
+        dependencies["@x402/evm"] = "^2.0.0";
     }
 
     return JSON.stringify(
@@ -110,7 +112,7 @@ export function generateRegistrationJson(answers: WizardAnswers, chain: ChainCon
         endpoint: `eip155:${chain.chainId}:${answers.agentWallet}`,
     });
 
-    const registration = {
+    const registration: Record<string, unknown> = {
         type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
         name: answers.agentName,
         description: answers.agentDescription,
@@ -118,7 +120,16 @@ export function generateRegistrationJson(answers: WizardAnswers, chain: ChainCon
         endpoints,
         registrations: [],
         supportedTrust: answers.trustModels,
+        active: true,
+        // OASF taxonomy - https://github.com/8004-org/oasf
+        skills: answers.skills || [],
+        domains: answers.domains || [],
     };
+
+    // Add x402 support flag if x402 feature was selected
+    if (hasFeature(answers, "x402")) {
+        registration.x402support = true;
+    }
 
     return JSON.stringify(registration, null, 2);
 }
@@ -185,22 +196,25 @@ ${
 // ============================================================================
 
 /**
- * Upload registration data to IPFS via Pinata
- * Returns the IPFS hash (CID) of the uploaded file
+ * Upload registration data to IPFS via Pinata Pinning API
+ * Returns the IPFS CID of the uploaded file (publicly accessible)
  */
 async function uploadToIPFS(data: string, jwt: string): Promise<string> {
-  const blob = new Blob([data], { type: 'application/json' });
-  const formData = new FormData();
-  formData.append('file', blob, 'registration.json');
-
-  const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+  const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
     method: 'POST',
-    headers: { Authorization: \`Bearer \${jwt}\` },
-    body: formData,
+    headers: {
+      Authorization: \`Bearer \${jwt}\`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      pinataContent: JSON.parse(data),
+      pinataMetadata: { name: 'registration.json' },
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(\`Pinata upload failed: \${response.statusText}\`);
+    const error = await response.text();
+    throw new Error(\`Pinata upload failed: \${response.statusText} - \${error}\`);
   }
 
   const result = await response.json() as { IpfsHash: string };
@@ -254,7 +268,8 @@ async function main() {
   }
 
   // Step 4: Setup wallet client (for sending transactions)
-  const account = privateKeyToAccount(privateKey as \`0x\${string}\`);
+  const formattedKey = privateKey.startsWith('0x') ? privateKey : \`0x\${privateKey}\`;
+  const account = privateKeyToAccount(formattedKey as \`0x\${string}\`);
   console.log('🔑 Registering from:', account.address);
 
   const walletClient = createWalletClient({

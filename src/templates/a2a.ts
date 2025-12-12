@@ -1,31 +1,67 @@
 import type { WizardAnswers } from "../wizard.js";
-import { hasFeature } from "../wizard.js";
+import { hasFeature, isSolanaChain } from "../wizard.js";
+import { CHAINS } from "../config.js";
+import { SOLANA_CHAINS } from "../config-solana.js";
+
+function getX402Network(answers: WizardAnswers): string {
+    if (isSolanaChain(answers.chain)) {
+        return SOLANA_CHAINS[answers.chain as keyof typeof SOLANA_CHAINS].x402Network;
+    }
+    return CHAINS[answers.chain as keyof typeof CHAINS].x402Network;
+}
 
 export function generateA2AServer(answers: WizardAnswers): string {
-    const x402Import = hasFeature(answers, "x402") ? `import { paymentMiddleware } from 'x402-express';` : "";
+    const isSolana = isSolanaChain(answers.chain);
+    const x402Network = hasFeature(answers, "x402") ? getX402Network(answers) : "";
+
+    // x402 v2 imports - @x402/evm for EVM chains, @x402/svm for Solana
+    const x402SchemePackage = isSolana ? "@x402/svm" : "@x402/evm";
+    const x402SchemeClass = isSolana ? "ExactSvmScheme" : "ExactEvmScheme";
+    const x402Import = hasFeature(answers, "x402")
+        ? `import { paymentMiddleware, x402ResourceServer } from '@x402/express';
+import { HTTPFacilitatorClient } from '@x402/core/server';
+import { ${x402SchemeClass} } from '${x402SchemePackage}/exact/server';`
+        : "";
+
     const streamingImport = answers.a2aStreaming
         ? `import { streamResponse, type AgentMessage } from './agent.js';`
         : `import { generateResponse, type AgentMessage } from './agent.js';`;
 
     const x402Setup = hasFeature(answers, "x402")
         ? `
-// x402 payment middleware - protects the /a2a endpoint
+// x402 v2 payment middleware - protects the /a2a endpoint
 // See: https://docs.cdp.coinbase.com/x402/quickstart-for-sellers
-const PAYEE_ADDRESS = (process.env.X402_PAYEE_ADDRESS || '${answers.agentWallet}') as \`0x\${string}\`;
+const PAYEE_ADDRESS = process.env.X402_PAYEE_ADDRESS || '${answers.agentWallet}';
+const X402_NETWORK = '${x402Network}'; // CAIP-2 ${isSolana ? "Solana" : "EVM"} network
 
-app.use(paymentMiddleware(
-  PAYEE_ADDRESS,
-  {
-    'POST /a2a': {
-      price: process.env.X402_PRICE || '$0.001',
-      network: 'base-sepolia', // Change to 'base' for mainnet
-      config: {
+// Create facilitator client (testnet - change URL for mainnet)
+const facilitatorClient = new HTTPFacilitatorClient({
+  url: 'https://x402.org/facilitator', // Testnet facilitator
+});
+
+// Register ${isSolana ? "SVM" : "EVM"} scheme for payment verification
+const x402Server = new x402ResourceServer(facilitatorClient)
+  .register(X402_NETWORK, new ${x402SchemeClass}());
+
+app.use(
+  paymentMiddleware(
+    {
+      'POST /a2a': {
+        accepts: [
+          {
+            scheme: 'exact',
+            price: process.env.X402_PRICE || '$0.001',
+            network: X402_NETWORK,
+            payTo: PAYEE_ADDRESS,
+          },
+        ],
         description: '${answers.agentDescription.replace(/'/g, "\\'")}',
+        mimeType: 'application/json',
       },
     },
-  },
-  { url: 'https://x402.org/facilitator' } // Testnet facilitator
-));
+    x402Server,
+  ),
+);
 `
         : "";
 

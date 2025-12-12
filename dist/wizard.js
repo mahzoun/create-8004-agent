@@ -2,7 +2,10 @@ import inquirer from "inquirer";
 import fs from "fs";
 import path from "path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
 import { CHAINS, TRUST_MODELS } from "./config.js";
+import { SOLANA_CHAINS, isSolanaChain } from "./config-solana.js";
 function getAvailableDir(baseDir) {
     if (baseDir === ".")
         return baseDir;
@@ -18,6 +21,8 @@ function getAvailableDir(baseDir) {
     }
     return newDir;
 }
+// Re-export for convenience
+export { isSolanaChain } from "./config-solana.js";
 // Helper getters for cleaner access
 export const hasFeature = (answers, feature) => answers.features.includes(feature);
 export async function runWizard() {
@@ -48,20 +53,49 @@ export async function runWizard() {
             default: "https://example.com/agent.png",
         },
         {
+            type: "list",
+            name: "chain",
+            message: "Blockchain network:",
+            choices: [
+                ...Object.entries(CHAINS).map(([key, chain]) => ({
+                    name: chain.name,
+                    value: key,
+                })),
+                new inquirer.Separator("── Solana ──"),
+                ...Object.entries(SOLANA_CHAINS).map(([key, chain]) => ({
+                    name: chain.name,
+                    value: key,
+                    disabled: "disabled" in chain && chain.disabled ? true : false,
+                })),
+            ],
+        },
+        {
             type: "input",
             name: "agentWallet",
             message: "Agent wallet address (leave empty to generate new):",
-            validate: (input) => input === "" || /^0x[a-fA-F0-9]{40}$/.test(input) || "Enter a valid Ethereum address or leave empty",
+            validate: (input, answers) => {
+                if (input === "")
+                    return true;
+                // Validate based on selected chain
+                if (answers?.chain && isSolanaChain(answers.chain)) {
+                    // Solana address validation (base58, 32-44 chars)
+                    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(input) || "Enter a valid Solana address or leave empty";
+                }
+                // EVM address validation
+                return /^0x[a-fA-F0-9]{40}$/.test(input) || "Enter a valid Ethereum address or leave empty";
+            },
         },
         {
             type: "checkbox",
             name: "features",
             message: "Select features to include:",
-            choices: [
-                { name: "A2A Server (agent-to-agent communication)", value: "a2a", checked: true },
-                { name: "x402 Payments (Coinbase, USDC)", value: "x402", checked: true },
-                { name: "MCP Server (Model Context Protocol tools)", value: "mcp", checked: false },
-            ],
+            choices: () => {
+                return [
+                    { name: "A2A Server (agent-to-agent communication)", value: "a2a", checked: true },
+                    { name: "x402 Payments (Coinbase, USDC)", value: "x402", checked: false },
+                    { name: "MCP Server (Model Context Protocol tools)", value: "mcp", checked: false },
+                ];
+            },
         },
         {
             type: "confirm",
@@ -77,18 +111,6 @@ export async function runWizard() {
             choices: [
                 { name: "Base64 (on-chain, no external dependencies)", value: "base64" },
                 { name: "IPFS (Pinata)", value: "ipfs" },
-            ],
-        },
-        {
-            type: "list",
-            name: "chain",
-            message: "Blockchain network:",
-            choices: [
-                ...Object.entries(CHAINS).map(([key, chain]) => ({
-                    name: chain.name,
-                    value: key,
-                })),
-                { name: "Solana (coming soon)", value: "solana", disabled: true },
             ],
         },
         {
@@ -109,11 +131,21 @@ export async function runWizard() {
     let agentWallet = answers.agentWallet;
     let generatedPrivateKey;
     if (!agentWallet) {
-        const privateKey = generatePrivateKey();
-        generatedPrivateKey = privateKey;
-        const account = privateKeyToAccount(privateKey);
-        agentWallet = account.address;
-        console.log("\n🔑 Generated new wallet:", agentWallet);
+        if (isSolanaChain(answers.chain)) {
+            // Generate Solana keypair
+            const keypair = Keypair.generate();
+            generatedPrivateKey = bs58.encode(keypair.secretKey);
+            agentWallet = keypair.publicKey.toBase58();
+            console.log("\n🔑 Generated new Solana wallet:", agentWallet);
+        }
+        else {
+            // Generate EVM wallet
+            const privateKey = generatePrivateKey();
+            generatedPrivateKey = privateKey;
+            const account = privateKeyToAccount(privateKey);
+            agentWallet = account.address;
+            console.log("\n🔑 Generated new wallet:", agentWallet);
+        }
     }
     return {
         ...answers,

@@ -8,6 +8,7 @@ export declare const CHAINS: {
         readonly reputationRegistry: "0x8004bd8daB57f14Ed299135749a5CB5c42d341BF";
         readonly validationRegistry: "0x8004C269D0A5647E51E121FeB226200ECE932d55";
         readonly scanPath: "base-sepolia";
+        readonly x402Network: "eip155:84532";
     };
     readonly "eth-sepolia": {
         readonly name: "Ethereum Sepolia";
@@ -18,6 +19,7 @@ export declare const CHAINS: {
         readonly reputationRegistry: "0x8004B8FD1A363aa02fDC07635C0c5F94f6Af5B7E";
         readonly validationRegistry: "0x8004CB39f29c09145F24Ad9dDe2A108C1A2cdfC5";
         readonly scanPath: "sepolia";
+        readonly x402Network: "eip155:11155111";
     };
     readonly "linea-sepolia": {
         readonly name: "Linea Sepolia";
@@ -28,6 +30,7 @@ export declare const CHAINS: {
         readonly reputationRegistry: "0x8004bd8483b99310df121c46ED8858616b2Bba02";
         readonly validationRegistry: "0x8004c44d1EFdd699B2A26e781eF7F77c56A9a4EB";
         readonly scanPath: null;
+        readonly x402Network: "eip155:59141";
     };
     readonly "polygon-amoy": {
         readonly name: "Polygon Amoy";
@@ -38,6 +41,7 @@ export declare const CHAINS: {
         readonly reputationRegistry: "0x8004B12F4C2B42d00c46479e859C92e39044C930";
         readonly validationRegistry: "0x8004C11C213ff7BaD36489bcBDF947ba5eee289B";
         readonly scanPath: null;
+        readonly x402Network: "eip155:80002";
     };
 };
 export type ChainKey = keyof typeof CHAINS;
