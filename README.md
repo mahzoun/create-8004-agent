@@ -1,19 +1,21 @@
-# create-trustless-agent
+# create-8004-agent
 
 CLI tool to scaffold [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) compliant AI agents with A2A, MCP, and x402 payment support.
+
+**Supports both EVM chains and Solana.**
 
 ## What is ERC-8004?
 
 ERC-8004 is a protocol for discovering and trusting AI agents across organizational boundaries. It provides:
 
-- **Identity Registry** - On-chain agent registration as NFTs
-- **Reputation Registry** - Feedback and trust signals
-- **Validation Registry** - Stake-secured verification
+-   **Identity Registry** - On-chain agent registration as NFTs
+-   **Reputation Registry** - Feedback and trust signals
+-   **Validation Registry** - Stake-secured verification
 
 ## Quick Start
 
 ```bash
-npx create-trustless-agent
+npx create-8004-agent
 ```
 
 That's it! The wizard will guide you through creating your agent.
@@ -40,28 +42,37 @@ my-agent/
 
 ## Wizard Options
 
-| Option | Description |
-|--------|-------------|
-| **Project directory** | Where to create the project |
-| **Agent name** | Your agent's name |
-| **Agent description** | What your agent does |
-| **Agent image** | URL to your agent's image/logo |
-| **Agent wallet** | Ethereum address (leave empty to auto-generate) |
-| **A2A server** | Enable agent-to-agent communication |
-| **MCP server** | Enable Model Context Protocol tools |
-| **x402 payments** | Enable [Coinbase x402](https://docs.cdp.coinbase.com/x402/quickstart-for-sellers) USDC payments |
-| **Storage** | IPFS (Pinata) or Base64 on-chain |
-| **Chain** | ETH Sepolia, Base Sepolia, Linea Sepolia, Polygon Amoy |
-| **Trust models** | reputation, crypto-economic, tee-attestation |
+| Option                | Description                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Project directory** | Where to create the project                                                                                    |
+| **Agent name**        | Your agent's name                                                                                              |
+| **Agent description** | What your agent does                                                                                           |
+| **Agent image**       | URL to your agent's image/logo                                                                                 |
+| **Agent wallet**      | EVM or Solana address (leave empty to auto-generate)                                                           |
+| **A2A server**        | Enable agent-to-agent communication                                                                            |
+| **A2A streaming**     | Enable Server-Sent Events (SSE) for streaming responses                                                        |
+| **MCP server**        | Enable Model Context Protocol tools                                                                            |
+| **x402 payments**     | Enable [Coinbase x402](https://docs.cdp.coinbase.com/x402/quickstart-for-sellers) USDC payments (EVM & Solana) |
+| **Storage**           | IPFS (Pinata) or Base64 on-chain (EVM only)                                                                    |
+| **Chain**             | EVM: Base Sepolia, ETH Sepolia, Linea Sepolia, Polygon Amoy / Solana: Devnet                                   |
+| **Trust models**      | reputation, crypto-economic, tee-attestation                                                                   |
 
 ## Supported Chains
 
-| Chain | Identity Registry |
-|-------|-------------------|
-| Base Sepolia | `0x8004AA63c570c570eBF15376c0dB199918BFe9Fb` |
-| ETH Sepolia | `0x8004a6090Cd10A7288092483047B097295Fb8847` |
+### EVM Chains
+
+| Chain         | Identity Registry                            |
+| ------------- | -------------------------------------------- |
+| Base Sepolia  | `0x8004AA63c570c570eBF15376c0dB199918BFe9Fb` |
+| ETH Sepolia   | `0x8004a6090Cd10A7288092483047B097295Fb8847` |
 | Linea Sepolia | `0x8004aa7C931bCE1233973a0C6A667f73F66282e7` |
-| Polygon Amoy | `0x8004ad19E14B9e0654f73353e8a0B600D46C2898` |
+| Polygon Amoy  | `0x8004ad19E14B9e0654f73353e8a0B600D46C2898` |
+
+### Solana
+
+| Network | Program ID                                    |
+| ------- | --------------------------------------------- |
+| Devnet  | `HvF3JqhahcX7JfhbDRYYCJ7S3f6nJdrqu5yi9hyTREp` |
 
 ## Generated Project Usage
 
@@ -79,10 +90,15 @@ Edit `.env` and fill in:
 ```env
 PRIVATE_KEY=...                   # Auto-generated if you left wallet empty
 OPENAI_API_KEY=your_openai_key    # For LLM responses
-PINATA_JWT=your_pinata_jwt        # If using IPFS storage
+PINATA_JWT=your_pinata_jwt        # If using IPFS storage (requires pinJSONToIPFS scope)
 ```
 
-**Auto-generated wallet:** If you left the wallet address empty, a new wallet was generated and the private key is already in `.env`. **Back up your .env file** and **fund the wallet with testnet ETH** before registering.
+**Auto-generated wallet:** If you left the wallet address empty, a new wallet was generated and the private key is already in `.env`. **Back up your .env file** and **fund the wallet with testnet tokens** before registering.
+
+-   **EVM chains:** Fund with testnet ETH (use faucets for Sepolia, Base Sepolia, etc.)
+-   **Solana Devnet:** Fund with devnet SOL via `solana airdrop` or faucets
+
+**Pinata JWT:** Create an API key at [pinata.cloud](https://pinata.cloud) with `pinJSONToIPFS` scope for public IPFS pinning.
 
 ### 2. Register Agent On-Chain
 
@@ -90,10 +106,11 @@ PINATA_JWT=your_pinata_jwt        # If using IPFS storage
 npm run register
 ```
 
-This will:
-- Upload `registration.json` to IPFS (or encode as base64)
-- Mint an NFT on the Identity Registry
-- Output your agent's on-chain ID
+**EVM chains:** Uploads metadata to IPFS and mints an NFT on the Identity Registry.
+
+**Solana:** Validates metadata using `buildRegistrationFileJson()`, uploads to IPFS, and mints a Metaplex Core NFT via the 8004 program.
+
+After registration, view your agent on [8004scan.io](https://www.8004scan.io/).
 
 ### 3. Start Your Servers
 
@@ -109,23 +126,26 @@ npm run start:mcp
 
 The generated A2A server implements:
 
-- **Agent Card** at `/.well-known/agent-card.json`
-- **JSON-RPC 2.0** endpoint at `/a2a`
-- Methods: `message/send`, `tasks/get`, `tasks/cancel`
+-   **Agent Card** at `/.well-known/agent-card.json`
+-   **JSON-RPC 2.0** endpoint at `/a2a`
+-   Methods: `message/send`, `tasks/get`, `tasks/cancel`
 
 ### Testing Your A2A Endpoint
 
 **1. Start the server:**
+
 ```bash
 npm run start:a2a
 ```
 
 **2. Test the agent card:**
+
 ```bash
 curl http://localhost:3000/.well-known/agent-card.json
 ```
 
 **3. Test the JSON-RPC endpoint:**
+
 ```bash
 curl -X POST http://localhost:3000/a2a \
   -H "Content-Type: application/json" \
@@ -148,17 +168,18 @@ If x402 is enabled, you'll get a `402 Payment Required` response with payment in
 
 If enabled, the A2A server uses [Coinbase x402](https://github.com/coinbase/x402) for micropayments:
 
-- Payments in USDC
-- Per-request pricing
-- Automatic payment verification
+-   **EVM chains:** Uses `@x402/evm` with USDC on supported networks
+-   **Solana:** Uses `@x402/svm` with USDC on Solana
+-   Per-request pricing (default: $0.001)
+-   Automatic payment verification via facilitator
 
 ## MCP Protocol
 
 The generated MCP server includes sample tools:
 
-- `chat` - Conversation with the LLM
-- `echo` - Echo back input (testing)
-- `get_time` - Current timestamp
+-   `chat` - Conversation with the LLM
+-   `echo` - Echo back input (testing)
+-   `get_time` - Current timestamp
 
 Add your own tools in `src/tools.ts`.
 
@@ -180,44 +201,45 @@ The server will communicate over stdin/stdout following the MCP protocol.
 
 ```json
 {
-  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "My Agent",
-  "description": "An AI agent...",
-  "image": "https://example.com/image.png",
-  "endpoints": [
-    {
-      "name": "A2A",
-      "endpoint": "http://localhost:3000/.well-known/agent-card.json",
-      "version": "0.3.0"
-    },
-    {
-      "name": "MCP",
-      "endpoint": "http://localhost:3001",
-      "version": "2025-06-18"
-    },
-    {
-      "name": "agentWallet",
-      "endpoint": "eip155:11155111:0x..."
-    }
-  ],
-  "registrations": [
-    {
-      "agentId": 123,
-      "agentRegistry": "eip155:11155111:0x8004..."
-    }
-  ],
-  "supportedTrust": ["reputation", "crypto-economic", "tee-attestation"]
+    "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+    "name": "My Agent",
+    "description": "An AI agent...",
+    "image": "https://example.com/image.png",
+    "endpoints": [
+        {
+            "name": "A2A",
+            "endpoint": "http://localhost:3000/.well-known/agent-card.json",
+            "version": "0.3.0"
+        },
+        {
+            "name": "MCP",
+            "endpoint": "http://localhost:3001",
+            "version": "2025-06-18"
+        },
+        {
+            "name": "agentWallet",
+            "endpoint": "eip155:11155111:0x..."
+        }
+    ],
+    "registrations": [
+        {
+            "agentId": 123,
+            "agentRegistry": "eip155:11155111:0x8004..."
+        }
+    ],
+    "supportedTrust": ["reputation", "crypto-economic", "tee-attestation"]
 }
 ```
 
 ## Resources
 
-- [ERC-8004 Specification](https://eips.ethereum.org/EIPS/eip-8004)
-- [A2A Protocol](https://a2a-protocol.org/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Coinbase x402](https://github.com/coinbase/x402)
+-   [ERC-8004 Specification](https://eips.ethereum.org/EIPS/eip-8004)
+-   [8004scan Explorer](https://www.8004scan.io/) - View registered agents
+-   [A2A Protocol](https://a2a-protocol.org/)
+-   [Model Context Protocol](https://modelcontextprotocol.io/)
+-   [Coinbase x402](https://github.com/coinbase/x402)
+-   [8004-solana SDK](https://github.com/8004-ai/8004-solana) - Solana implementation
 
 ## License
 
 MIT
-
