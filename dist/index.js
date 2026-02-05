@@ -3,6 +3,7 @@ import chalk from "chalk";
 import ora from "ora";
 import { runWizard, hasFeature, isSolanaChain } from "./wizard.js";
 import { generateProject } from "./generator.js";
+import { maybeRegisterWithFourmica } from "./fourmica.js";
 async function main() {
     console.log(chalk.bold.cyan("\n🤖 8004 Agent Generator\n"));
     console.log(chalk.gray("Create a trustless AI agent with A2A, MCP, and x402 support\n"));
@@ -14,6 +15,7 @@ async function main() {
         await generateProject(answers);
         const isSolana = isSolanaChain(answers.chain);
         spinner.succeed(chalk.green(`${isSolana ? "8004" : "ERC-8004"} Agent generated successfully!`));
+        await maybeRegisterWithFourmica(answers);
         // Print step-by-step guide
         const projectDir = answers.projectDir === "." ? "current directory" : answers.projectDir;
         let step = 1;

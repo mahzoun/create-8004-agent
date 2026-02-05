@@ -3,6 +3,7 @@ import chalk from "chalk";
 import ora from "ora";
 import { runWizard, hasFeature, isSolanaChain } from "./wizard.js";
 import { generateProject } from "./generator.js";
+import { maybeRegisterWithFourmica } from "./fourmica.js";
 
 async function main() {
     console.log(chalk.bold.cyan("\n🤖 8004 Agent Generator\n"));
@@ -19,6 +20,8 @@ async function main() {
 
         const isSolana = isSolanaChain(answers.chain);
         spinner.succeed(chalk.green(`${isSolana ? "8004" : "ERC-8004"} Agent generated successfully!`));
+
+        await maybeRegisterWithFourmica(answers);
 
     // Print step-by-step guide
         const projectDir = answers.projectDir === "." ? "current directory" : answers.projectDir;

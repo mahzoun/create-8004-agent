@@ -1,8 +1,3 @@
-// Chain configs - SDK handles contract addresses internally
-// x402 facilitators:
-// - PayAI (https://facilitator.payai.network) for Base, Polygon
-// - 4mica (https://x402.4mica.xyz) for Ethereum Sepolia, Polygon Amoy
-// Not supported: Ethereum mainnet, Monad (no facilitator with x402 v2 support)
 export const CHAINS = {
     // ============ MAINNETS ============
     "eth-mainnet": {
@@ -68,7 +63,7 @@ export const CHAINS = {
         x402Providers: ["4mica"],
         x402DefaultProvider: "4mica",
         facilitatorUrl: null,
-        usdcAddress: null,
+        usdcAddress: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
     },
     "base-sepolia": {
         name: "Base Sepolia (Testnet)",

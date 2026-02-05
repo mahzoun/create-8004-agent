@@ -452,7 +452,8 @@ This agent has x402 payment support enabled. Protected endpoints require USDC pa
 Payment configuration in \`.env\`:
 - \`X402_PAYEE_ADDRESS\` - Wallet to receive payments
 - \`X402_PRICE\` - Price per request (e.g., $0.001)
-${x402Provider === "4mica" ? "- `X402_TAB_ENDPOINT` - Public tab endpoint advertised to clients\n" : ""}`
+${x402Provider === "4mica" ? "- `X402_TAB_ENDPOINT` - Public tab endpoint advertised to clients" : ""}
+`
         : ""}
 ## OASF Skills & Domains (Optional)
 

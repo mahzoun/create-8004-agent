@@ -70,7 +70,7 @@ export const CHAINS = {
         x402Providers: ["4mica"] as X402Provider[],
         x402DefaultProvider: "4mica" as X402Provider,
         facilitatorUrl: null,
-        usdcAddress: null,
+        usdcAddress: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
     },
     "base-sepolia": {
         name: "Base Sepolia (Testnet)",

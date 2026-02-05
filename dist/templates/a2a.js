@@ -66,7 +66,7 @@ import { ${x402SchemeClass} } from '${x402SchemePackage}/exact/server';`
     const customUsdcParser = resolvedProvider !== "payai"
         ? ""
         : usdcConfig
-        ? `
+            ? `
 // Custom USDC configuration for this network (not in SDK defaults)
 const USDC_ADDRESS = '${usdcConfig.address}';
 const USDC_NAME = '${usdcConfig.name}';
@@ -88,7 +88,7 @@ evmScheme.registerMoneyParser(async (amount) => {
   };
 });
 `
-        : `
+            : `
 // Create scheme (using SDK default USDC address)
 const evmScheme = new ${x402SchemeClass}();
 `;
